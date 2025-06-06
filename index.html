@@ -157,10 +157,12 @@
     playlistSelect.appendChild(defaultOpt);
 
     m3u8List.forEach(filename => {
-      const opt = document.createElement("option");
-      opt.value = filename;
-      opt.text = filename.replace(".m3u8", "").replace(/_/g, " ");
-      playlistSelect.appendChild(opt);
+      if (filename) {
+        const opt = document.createElement("option");
+        opt.value = filename;
+        opt.text = filename.replace(".m3u8", "").replace(/_/g, " ");
+        playlistSelect.appendChild(opt);
+      }
     });
   }
 
@@ -257,7 +259,40 @@
     }
   }
 
-  setInterval(updateAmbilight, 100);
+  // Fallback en cas de blocage du canvas
+  function simulateAmbilight() {
+    const simulatedColors = ["#ff5050", "#50ff50", "#5050ff", "#ffff50", "#50ffff"];
+    let index = 0;
+
+    setInterval(() => {
+      const color = simulatedColors[index % simulatedColors.length];
+      ambilightZones.top.style.background = color;
+      ambilightZones.bottom.style.background = color;
+      ambilightZones.left.style.background = color;
+      ambilightZones.right.style.background = color;
+      circle.style.background = `radial-gradient(circle at center, transparent 65%, ${color} 100%)`;
+      index++;
+    }, 3000);
+  }
+
+  function tryAmbilight() {
+    try {
+      canvas.width = 32;
+      canvas.height = 18;
+      ctx.drawImage(video, 0, 0, 32, 18);
+      const data = ctx.getImageData(0, 0, 32, 18).data;
+      if (data) {
+        setInterval(updateAmbilight, 100);
+      } else {
+        throw "Canvas bloqué";
+      }
+    } catch (e) {
+      console.warn("Ambilight dynamique désactivé : fallback simulation", e);
+      simulateAmbilight();
+    }
+  }
+
+  video.addEventListener("loadeddata", tryAmbilight);
 </script>
 
 </body>
