@@ -1,0 +1,12 @@
+#EXTM3U
+
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio0",NAME="Français",LANGUAGE="fr",AUTOSELECT=YES,DEFAULT=YES,CHANNELS="2",URI="https://dl34.topstrime.online/hls2/15/00307/3leyyogsnhzz_x/index-a1.m3u8?t=g4NBd6Xf6fPyjJfuGVLLr6qz-3SplSPgnunAcBx3xRY&s=1749225073&e=43200&f=5066926&i=0.0&sp=0&fr=3leyyogsnhzz"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio0",NAME="English",LANGUAGE="en",AUTOSELECT=NO,DEFAULT=NO,CHANNELS="2",URI="https://dl34.topstrime.online/hls2/15/00307/3leyyogsnhzz_x/index-a2.m3u8?t=g4NBd6Xf6fPyjJfuGVLLr6qz-3SplSPgnunAcBx3xRY&s=1749225073&e=43200&f=5066926&i=0.0&sp=0&fr=3leyyogsnhzz"
+
+
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs0",NAME="Français",LANGUAGE="fr",AUTOSELECT=YES,DEFAULT=YES,URI="https://dl34.topstrime.online/hls2/15/00307/lang/fre/3leyyogsnhzz_fre/index.m3u8?t=g4NBd6Xf6fPyjJfuGVLLr6qz-3SplSPgnunAcBx3xRY&s=1749225073&e=43200&f=5066926&i=0.0&sp=0&fr=3leyyogsnhzz"
+
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=2777044,RESOLUTION=1920x1080,FRAME-RATE=24.000,CODECS="avc1.640028,mp4a.40.2",AUDIO="audio0",SUBTITLES="subs0"
+https://dl34.topstrime.online/hls2/15/00307/3leyyogsnhzz_x/index-v1-a1.m3u8?t=g4NBd6Xf6fPyjJfuGVLLr6qz-3SplSPgnunAcBx3xRY&s=1749225073&e=43200&f=5066926&i=0.0&sp=0&fr=3leyyogsnhzz
+
+#EXT-X-I-FRAME-STREAM-INF:BANDWIDTH=194962,RESOLUTION=1920x1080,CODECS="avc1.640028",URI="https://dl34.topstrime.online/hls2/15/00307/3leyyogsnhzz_x/iframes-v1-a1.m3u8?t=g4NBd6Xf6fPyjJfuGVLLr6qz-3SplSPgnunAcBx3xRY&s=1749225073&e=43200&f=5066926&i=0.0&sp=0&fr=3leyyogsnhzz"
