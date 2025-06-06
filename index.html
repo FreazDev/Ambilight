@@ -1,523 +1,220 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lecteur Vidéo Ambilight</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8">
+  <title>Ambilight Player</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: black;
+      overflow: hidden;
+      cursor: none;
+    }
 
-        body {
-            background: #000;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
-        }
+    #container {
+      position: absolute;
+      top: 5vh;
+      left: 5vw;
+      width: 90vw;
+      height: 90vh;
+      z-index: 1;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(255,255,255,0.1);
+    }
 
-        .container {
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: black;
+    }
 
-        .upload-interface {
-            text-align: center;
-            color: white;
-            z-index: 100;
-            background: rgba(0,0,0,0.8);
-            padding: 40px;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        }
+    .ambilight {
+      position: fixed;
+      z-index: 0;
+      filter: blur(100px) brightness(2.2) saturate(1.4);
+      pointer-events: none;
+      animation: pulse 4s infinite ease-in-out;
+    }
 
-        .upload-interface.hidden {
-            display: none;
-        }
+    @keyframes pulse {
+      0%, 100% { filter: blur(100px) brightness(2.2) saturate(1.4); }
+      50% { filter: blur(120px) brightness(2.8) saturate(1.6); }
+    }
 
-        h1 {
-            margin-bottom: 30px;
-            font-size: 2.5rem;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+    #top, #bottom {
+      width: 100vw;
+      height: 5vh;
+      left: 0;
+    }
 
-        .upload-section {
-            margin-bottom: 30px;
-        }
+    #top { top: 0; }
+    #bottom { bottom: 0; }
 
-        .upload-section h3 {
-            margin-bottom: 15px;
-            color: #fff;
-            font-size: 1.2rem;
-        }
+    #left, #right {
+      width: 5vw;
+      height: 100vh;
+      top: 0;
+    }
 
-        input[type="file"] {
-            display: none;
-        }
+    #left { left: 0; }
+    #right { right: 0; }
 
-        .file-upload-btn, .url-load-btn {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            border: none;
-            padding: 15px 30px;
-            color: white;
-            border-radius: 50px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            margin: 10px;
-            display: inline-block;
-        }
+    #controls {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      z-index: 3;
+      display: flex;
+      gap: 10px;
+      opacity: 1;
+      transition: opacity 0.5s;
+    }
 
-        .file-upload-btn:hover, .url-load-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
+    .btn {
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
 
-        input[type="url"] {
-            width: 100%;
-            max-width: 400px;
-            padding: 12px 20px;
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 25px;
-            background: rgba(255,255,255,0.1);
-            color: white;
-            font-size: 1rem;
-            margin-bottom: 15px;
-        }
+    canvas {
+      display: none;
+    }
 
-        input[type="url"]::placeholder {
-            color: rgba(255,255,255,0.6);
-        }
-
-        .video-container {
-            position: relative;
-            display: none;
-            width: calc(100vw - 200px);
-            height: calc(100vh - 200px);
-        }
-
-        .video-container.active {
-            display: block;
-        }
-
-        #mainVideo {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            border-radius: 10px;
-            box-shadow: 0 0 100px rgba(0,0,0,0.5);
-            position: relative;
-            z-index: 2;
-        }
-
-        .ambilight-canvas {
-            position: absolute;
-            top: -200px;
-            left: -200px;
-            width: calc(100% + 400px);
-            height: calc(100% + 400px);
-            z-index: 1;
-            filter: blur(120px);
-            opacity: 1;
-            pointer-events: none;
-        }
-
-        .controls {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            z-index: 10;
-            display: flex;
-            gap: 10px;
-        }
-
-        .control-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            color: white;
-            cursor: pointer;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-        }
-
-        .control-btn:hover {
-            background: rgba(255,255,255,0.3);
-            transform: scale(1.1);
-        }
-
-        .loading {
-            color: white;
-            font-size: 1.2rem;
-            text-align: center;
-        }
-
-        .error {
-            color: #ff6b6b;
-            font-size: 1.1rem;
-            text-align: center;
-            margin-top: 15px;
-        }
-    </style>
+    #circle-ambilight {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      background: radial-gradient(circle at center, transparent 60%, rgba(255,255,255,0.1) 100%);
+      mix-blend-mode: screen;
+      transition: background 0.2s ease;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="upload-interface" id="uploadInterface">
-            <h1>🎬 Lecteur Ambilight</h1>
-            
-            <div class="upload-section">
-                <h3>📁 Charger un fichier local</h3>
-                <input type="file" id="fileInput" accept="video/*">
-                <label for="fileInput" class="file-upload-btn">
-                    Choisir un fichier vidéo
-                </label>
-            </div>
 
-            <div class="upload-section">
-                <h3>🌐 Charger depuis une URL</h3>
-                <input type="url" id="urlInput" placeholder="https://exemple.com/video.mp4">
-                <br>
-                <button class="url-load-btn" onclick="loadFromUrl()">
-                    Charger la vidéo
-                </button>
-            </div>
+<div id="controls">
+  <input type="file" id="fileInput" class="btn" accept="video/mp4,video/x-matroska,application/x-mpegURL">
+  <button id="changeBtn" class="btn">Changer de vidéo</button>
+</div>
 
-            <div id="status"></div>
-        </div>
+<div id="container">
+  <video id="video" autoplay muted controls></video>
+</div>
 
-        <div class="video-container" id="videoContainer">
-            <canvas class="ambilight-canvas" id="ambilightCanvas"></canvas>
-            <video id="mainVideo" controls></video>
-            <div class="controls">
-                <button class="control-btn" onclick="toggleFullscreen()" title="Plein écran">⛶</button>
-                <button class="control-btn" onclick="backToMenu()" title="Retour">↩</button>
-            </div>
-        </div>
-    </div>
+<!-- Ambilight zones -->
+<div id="top" class="ambilight"></div>
+<div id="bottom" class="ambilight"></div>
+<div id="left" class="ambilight"></div>
+<div id="right" class="ambilight"></div>
+<div id="circle-ambilight"></div>
 
-    <script>
-        let video, canvas, ctx, animationId;
-        let samplingCanvas, samplingCtx;
+<canvas id="canvas"></canvas>
 
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                loadVideo(URL.createObjectURL(file));
-            }
-        });
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script>
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+  const fileInput = document.getElementById("fileInput");
+  const changeBtn = document.getElementById("changeBtn");
+  const controls = document.getElementById("controls");
+  const circle = document.getElementById("circle-ambilight");
 
-        function loadFromUrl() {
-            const url = document.getElementById('urlInput').value.trim();
-            if (url) {
-                document.getElementById('status').innerHTML = '<div class="loading">Chargement de la vidéo...</div>';
-                loadVideo(url);
-            }
-        }
+  const ambilightZones = {
+    top: document.getElementById("top"),
+    bottom: document.getElementById("bottom"),
+    left: document.getElementById("left"),
+    right: document.getElementById("right"),
+  };
 
-        function loadVideo(src) {
-            video = document.getElementById('mainVideo');
-            canvas = document.getElementById('ambilightCanvas');
-            ctx = canvas.getContext('2d');
+  let hls;
 
-            // Canvas pour l'échantillonnage des couleurs (plus petit pour les performances)
-            samplingCanvas = document.createElement('canvas');
-            samplingCtx = samplingCanvas.getContext('2d');
-            samplingCanvas.width = 64;
-            samplingCanvas.height = 36;
+  function handleFile(file) {
+    const url = URL.createObjectURL(file);
+    const extension = file.name.split(".").pop().toLowerCase();
 
-            video.src = src;
-            
-            video.addEventListener('loadedmetadata', function() {
-                document.getElementById('uploadInterface').classList.add('hidden');
-                document.getElementById('videoContainer').classList.add('active');
-                
-                // Ajuster la taille du canvas
-                const container = document.getElementById('videoContainer');
-                canvas.width = container.offsetWidth + 400;
-                canvas.height = container.offsetHeight + 400;
-                
-                startAmbilight();
-            });
+    if (hls) hls.destroy();
 
-            video.addEventListener('error', function() {
-                document.getElementById('status').innerHTML = '<div class="error">Erreur lors du chargement de la vidéo</div>';
-            });
+    if (extension === "m3u8" && Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(url);
+      hls.attachMedia(video);
+    } else {
+      video.src = url;
+    }
 
-            video.play();
-        }
+    video.play();
+    document.documentElement.requestFullscreen();
+    controls.style.opacity = "0";
+    setTimeout(() => controls.style.display = "none", 500);
+  }
 
-        function startAmbilight() {
-            function updateAmbilight() {
-                if (video.paused || video.ended) {
-                    animationId = requestAnimationFrame(updateAmbilight);
-                    return;
-                }
+  fileInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) handleFile(file);
+  });
 
-                try {
-                    // Dessiner la vidéo sur le canvas d'échantillonnage (réduit)
-                    samplingCtx.drawImage(video, 0, 0, samplingCanvas.width, samplingCanvas.height);
-                    
-                    // Obtenir les données d'image
-                    const imageData = samplingCtx.getImageData(0, 0, samplingCanvas.width, samplingCanvas.height);
-                    const data = imageData.data;
+  changeBtn.addEventListener("click", () => {
+    fileInput.click();
+  });
 
-                    // Analyser les couleurs des bords
-                    const colors = analyzeEdgeColors(data, samplingCanvas.width, samplingCanvas.height);
-                    
-                    // Dessiner l'effet ambilight
-                    drawAmbilight(colors);
-                } catch (error) {
-                    // Ignorer les erreurs CORS ou autres problèmes de canvas
-                    console.warn('Erreur ambilight:', error);
-                }
+  document.addEventListener("mousemove", () => {
+    controls.style.display = "flex";
+    controls.style.opacity = "1";
+    clearTimeout(window.controlTimeout);
+    window.controlTimeout = setTimeout(() => {
+      controls.style.opacity = "0";
+      setTimeout(() => controls.style.display = "none", 500);
+    }, 2500);
+  });
 
-                animationId = requestAnimationFrame(updateAmbilight);
-            }
+  function getAverageColor(data, width, height, x1, y1, x2, y2) {
+    let r = 0, g = 0, b = 0, count = 0;
+    for (let y = y1; y < y2; y++) {
+      for (let x = x1; x < x2; x++) {
+        const i = (y * width + x) * 4;
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+        count++;
+      }
+    }
+    if (count === 0) return "black";
+    return `rgb(${(r / count) | 0}, ${(g / count) | 0}, ${(b / count) | 0})`;
+  }
 
-            updateAmbilight();
-        }
+  function updateAmbilight() {
+    if (video.readyState >= 2 && video.videoWidth && video.videoHeight) {
+      const vw = 96;
+      const vh = 54;
+      canvas.width = vw;
+      canvas.height = vh;
+      ctx.drawImage(video, 0, 0, vw, vh);
+      const frame = ctx.getImageData(0, 0, vw, vh);
+      const data = frame.data;
 
-        function analyzeEdgeColors(data, width, height) {
-            const colors = [];
-            const segments = 32; // Plus de segments pour une distribution uniforme
-            const borderSize = 12;
+      ambilightZones.top.style.background = getAverageColor(data, vw, vh, 0, 0, vw, 6);
+      ambilightZones.bottom.style.background = getAverageColor(data, vw, vh, 0, vh - 6, vw, vh);
+      ambilightZones.left.style.background = getAverageColor(data, vw, vh, 0, 0, 4, vh);
+      ambilightZones.right.style.background = getAverageColor(data, vw, vh, vw - 4, 0, vw, vh);
+      circle.style.background = `radial-gradient(circle at center, transparent 60%, ${getAverageColor(data, vw, vh, 40, 20, 56, 34)} 100%)`;
+    }
 
-            // Analyser le périmètre complet de l'image
-            // Haut
-            for (let i = 0; i < segments; i++) {
-                const x = Math.floor((width * i) / segments);
-                const regionColors = [];
-                for (let y = 0; y < borderSize; y++) {
-                    for (let dx = 0; dx < Math.floor(width / segments); dx++) {
-                        const px = Math.min(x + dx, width - 1);
-                        const idx = (y * width + px) * 4;
-                        regionColors.push([data[idx], data[idx + 1], data[idx + 2]]);
-                    }
-                }
-                colors.push({
-                    x: x + Math.floor(width / segments / 2),
-                    y: 0,
-                    color: averageColor(regionColors),
-                    side: 'top'
-                });
-            }
+    requestAnimationFrame(updateAmbilight);
+  }
 
-            // Droite
-            for (let i = 0; i < segments; i++) {
-                const y = Math.floor((height * i) / segments);
-                const regionColors = [];
-                for (let x = width - borderSize; x < width; x++) {
-                    for (let dy = 0; dy < Math.floor(height / segments); dy++) {
-                        const py = Math.min(y + dy, height - 1);
-                        const idx = (py * width + x) * 4;
-                        regionColors.push([data[idx], data[idx + 1], data[idx + 2]]);
-                    }
-                }
-                colors.push({
-                    x: width - 1,
-                    y: y + Math.floor(height / segments / 2),
-                    color: averageColor(regionColors),
-                    side: 'right'
-                });
-            }
-
-            // Bas
-            for (let i = segments - 1; i >= 0; i--) {
-                const x = Math.floor((width * i) / segments);
-                const regionColors = [];
-                for (let y = height - borderSize; y < height; y++) {
-                    for (let dx = 0; dx < Math.floor(width / segments); dx++) {
-                        const px = Math.min(x + dx, width - 1);
-                        const idx = (y * width + px) * 4;
-                        regionColors.push([data[idx], data[idx + 1], data[idx + 2]]);
-                    }
-                }
-                colors.push({
-                    x: x + Math.floor(width / segments / 2),
-                    y: height - 1,
-                    color: averageColor(regionColors),
-                    side: 'bottom'
-                });
-            }
-
-            // Gauche
-            for (let i = segments - 1; i >= 0; i--) {
-                const y = Math.floor((height * i) / segments);
-                const regionColors = [];
-                for (let x = 0; x < borderSize; x++) {
-                    for (let dy = 0; dy < Math.floor(height / segments); dy++) {
-                        const py = Math.min(y + dy, height - 1);
-                        const idx = (py * width + x) * 4;
-                        regionColors.push([data[idx], data[idx + 1], data[idx + 2]]);
-                    }
-                }
-                colors.push({
-                    x: 0,
-                    y: y + Math.floor(height / segments / 2),
-                    color: averageColor(regionColors),
-                    side: 'left'
-                });
-            }
-
-            return colors;
-        }
-
-        function averageColor(colors) {
-            if (colors.length === 0) return [0, 0, 0];
-            
-            let r = 0, g = 0, b = 0;
-            colors.forEach(color => {
-                r += color[0];
-                g += color[1];
-                b += color[2];
-            });
-            
-            return [
-                Math.round(r / colors.length),
-                Math.round(g / colors.length),
-                Math.round(b / colors.length)
-            ];
-        }
-
-        function drawAmbilight(colorSegments) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const videoWidth = canvas.width - 400;
-            const videoHeight = canvas.height - 400;
-            const offsetX = 200;
-            const offsetY = 200;
-
-            // Mode de fusion pour un effet naturel
-            ctx.globalCompositeOperation = 'screen';
-
-            colorSegments.forEach((segment, index) => {
-                // Calculer la position sur le bord du canvas correspondant à la position vidéo
-                let canvasX, canvasY;
-                
-                const normalizedX = segment.x / 64; // Normaliser par rapport à la taille du canvas d'échantillonnage
-                const normalizedY = segment.y / 36;
-                
-                if (segment.side === 'top') {
-                    canvasX = offsetX + (normalizedX * videoWidth);
-                    canvasY = 0;
-                } else if (segment.side === 'bottom') {
-                    canvasX = offsetX + (normalizedX * videoWidth);
-                    canvasY = canvas.height;
-                } else if (segment.side === 'left') {
-                    canvasX = 0;
-                    canvasY = offsetY + (normalizedY * videoHeight);
-                } else if (segment.side === 'right') {
-                    canvasX = canvas.width;
-                    canvasY = offsetY + (normalizedY * videoHeight);
-                }
-
-                // Créer un gradient radial centré sur cette position
-                const maxRadius = Math.max(canvas.width, canvas.height) * 0.8;
-                const gradient = ctx.createRadialGradient(canvasX, canvasY, 0, canvasX, canvasY, maxRadius);
-                
-                const color = segment.color;
-                const intensity = 0.8;
-                
-                // Gradient avec transitions plus douces
-                gradient.addColorStop(0, `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${intensity})`);
-                gradient.addColorStop(0.1, `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${intensity * 0.7})`);
-                gradient.addColorStop(0.3, `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${intensity * 0.4})`);
-                gradient.addColorStop(0.6, `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${intensity * 0.2})`);
-                gradient.addColorStop(1, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0)`);
-                
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            });
-
-            // Deuxième passage avec un mode de fusion différent pour plus de profondeur
-            ctx.globalCompositeOperation = 'multiply';
-            ctx.globalAlpha = 0.15;
-
-            colorSegments.forEach((segment, index) => {
-                let canvasX, canvasY;
-                
-                const normalizedX = segment.x / 64;
-                const normalizedY = segment.y / 36;
-                
-                if (segment.side === 'top') {
-                    canvasX = offsetX + (normalizedX * videoWidth);
-                    canvasY = 0;
-                } else if (segment.side === 'bottom') {
-                    canvasX = offsetX + (normalizedX * videoWidth);
-                    canvasY = canvas.height;
-                } else if (segment.side === 'left') {
-                    canvasX = 0;
-                    canvasY = offsetY + (normalizedY * videoHeight);
-                } else if (segment.side === 'right') {
-                    canvasX = canvas.width;
-                    canvasY = offsetY + (normalizedY * videoHeight);
-                }
-
-                const smallRadius = Math.max(canvas.width, canvas.height) * 0.4;
-                const gradient = ctx.createRadialGradient(canvasX, canvasY, 0, canvasX, canvasY, smallRadius);
-                
-                const color = segment.color;
-                gradient.addColorStop(0, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 1)`);
-                gradient.addColorStop(0.5, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.3)`);
-                gradient.addColorStop(1, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0)`);
-                
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            });
-
-            // Restaurer les paramètres
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.globalAlpha = 1;
-        }
-
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
-        function backToMenu() {
-            if (video) {
-                video.pause();
-                video.src = '';
-            }
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-            }
-            
-            document.getElementById('videoContainer').classList.remove('active');
-            document.getElementById('uploadInterface').classList.remove('hidden');
-            document.getElementById('status').innerHTML = '';
-            document.getElementById('urlInput').value = '';
-            document.getElementById('fileInput').value = '';
-        }
-
-        // Gestion du redimensionnement
-        window.addEventListener('resize', function() {
-            if (canvas && document.getElementById('videoContainer').classList.contains('active')) {
-                const container = document.getElementById('videoContainer');
-                canvas.width = container.offsetWidth + 400;
-                canvas.height = container.offsetHeight + 400;
-            }
-        });
-    </script>
+  updateAmbilight();
+</script>
 </body>
 </html>
