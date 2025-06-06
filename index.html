@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Ambilight Player</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ambilight avec Liste m3u8</title>
   <style>
     html, body {
       margin: 0;
@@ -12,7 +13,6 @@
       overflow: hidden;
       cursor: none;
     }
-
     #container {
       position: absolute;
       top: 5vh;
@@ -22,47 +22,39 @@
       z-index: 1;
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 0 30px rgba(255,255,255,0.1);
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
     }
-
     video {
       width: 100%;
       height: 100%;
       object-fit: contain;
       background: black;
     }
-
     .ambilight {
       position: fixed;
       z-index: 0;
-      filter: blur(100px) brightness(2.2) saturate(1.4);
+      filter: blur(90px) brightness(2.4) saturate(1.5);
       pointer-events: none;
-      animation: pulse 4s infinite ease-in-out;
+      animation: pulse 5s infinite ease-in-out;
     }
-
     @keyframes pulse {
-      0%, 100% { filter: blur(100px) brightness(2.2) saturate(1.4); }
-      50% { filter: blur(120px) brightness(2.8) saturate(1.6); }
+      0%, 100% { filter: blur(90px) brightness(2.4) saturate(1.5); }
+      50% { filter: blur(110px) brightness(3) saturate(1.7); }
     }
-
     #top, #bottom {
       width: 100vw;
       height: 5vh;
       left: 0;
     }
-
     #top { top: 0; }
     #bottom { bottom: 0; }
-
     #left, #right {
       width: 5vw;
       height: 100vh;
       top: 0;
     }
-
     #left { left: 0; }
     #right { right: 0; }
-
     #controls {
       position: absolute;
       top: 15px;
@@ -72,8 +64,8 @@
       gap: 10px;
       opacity: 1;
       transition: opacity 0.5s;
+      align-items: center;
     }
-
     .btn {
       padding: 8px 14px;
       background: rgba(255, 255, 255, 0.9);
@@ -82,11 +74,17 @@
       font-weight: bold;
       cursor: pointer;
     }
-
+    select {
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.9);
+    }
     canvas {
       display: none;
     }
-
     #circle-ambilight {
       position: absolute;
       top: 0;
@@ -95,7 +93,7 @@
       height: 100vh;
       pointer-events: none;
       z-index: 0;
-      background: radial-gradient(circle at center, transparent 60%, rgba(255,255,255,0.1) 100%);
+      background: radial-gradient(circle at center, transparent 65%, rgba(255,255,255,0.12) 100%);
       mix-blend-mode: screen;
       transition: background 0.2s ease;
     }
@@ -104,15 +102,18 @@
 <body>
 
 <div id="controls">
-  <input type="file" id="fileInput" class="btn" accept="video/mp4,video/x-matroska,application/x-mpegURL">
+  <input type="file" id="fileInput" class="btn" accept="video/mp4,video/x-matroska,application/x-mpegURL" style="display:none" />
   <button id="changeBtn" class="btn">Changer de vidéo</button>
+  <select id="playlistSelect" title="Sélectionner une vidéo m3u8">
+    <!-- Options ajoutées dynamiquement -->
+  </select>
 </div>
 
 <div id="container">
-  <video id="video" autoplay muted controls></video>
+  <video id="video" autoplay muted controls preload="auto"></video>
 </div>
 
-<!-- Ambilight zones -->
+<!-- Zones Ambilight -->
 <div id="top" class="ambilight"></div>
 <div id="bottom" class="ambilight"></div>
 <div id="left" class="ambilight"></div>
@@ -121,7 +122,9 @@
 
 <canvas id="canvas"></canvas>
 
+<!-- Librairie HLS.js -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
 <script>
   const video = document.getElementById("video");
   const canvas = document.getElementById("canvas");
@@ -130,6 +133,7 @@
   const changeBtn = document.getElementById("changeBtn");
   const controls = document.getElementById("controls");
   const circle = document.getElementById("circle-ambilight");
+  const playlistSelect = document.getElementById("playlistSelect");
 
   const ambilightZones = {
     top: document.getElementById("top"),
@@ -138,35 +142,76 @@
     right: document.getElementById("right"),
   };
 
+  const m3u8List = [
+    "https://raw.githubusercontent.com/FreazDev/Ambilight/main/master.m3u8", // TEST public
+    "",
+    "",
+    ""
+  ];
+
+  function fillPlaylist() {
+    playlistSelect.innerHTML = "";
+    const defaultOpt = document.createElement("option");
+    defaultOpt.text = "Sélectionner un film...";
+    defaultOpt.value = "";
+    playlistSelect.appendChild(defaultOpt);
+
+    m3u8List.forEach(filename => {
+      const opt = document.createElement("option");
+      opt.value = filename;
+      opt.text = filename.replace(".m3u8", "").replace(/_/g, " ");
+      playlistSelect.appendChild(opt);
+    });
+  }
+
+  fillPlaylist();
+
   let hls;
 
-  function handleFile(file) {
-    const url = URL.createObjectURL(file);
-    const extension = file.name.split(".").pop().toLowerCase();
+  function loadVideoSource(src) {
+    if (hls) {
+      hls.destroy();
+      hls = null;
+    }
 
-    if (hls) hls.destroy();
+    video.pause();
+    video.removeAttribute("src");
 
-    if (extension === "m3u8" && Hls.isSupported()) {
+    if (src.endsWith(".m3u8") && Hls.isSupported()) {
       hls = new Hls();
-      hls.loadSource(url);
+      hls.loadSource(src);
       hls.attachMedia(video);
     } else {
-      video.src = url;
+      video.src = src;
     }
 
     video.play();
-    document.documentElement.requestFullscreen();
+    if (document.fullscreenEnabled) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+
     controls.style.opacity = "0";
     setTimeout(() => controls.style.display = "none", 500);
   }
 
   fileInput.addEventListener("change", (e) => {
     const file = e.target.files[0];
-    if (file) handleFile(file);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      loadVideoSource(url);
+      playlistSelect.value = "";
+    }
   });
 
   changeBtn.addEventListener("click", () => {
     fileInput.click();
+  });
+
+  playlistSelect.addEventListener("change", () => {
+    const val = playlistSelect.value;
+    if (val) {
+      loadVideoSource(val);
+    }
   });
 
   document.addEventListener("mousemove", () => {
@@ -196,25 +241,24 @@
 
   function updateAmbilight() {
     if (video.readyState >= 2 && video.videoWidth && video.videoHeight) {
-      const vw = 96;
-      const vh = 54;
+      const vw = 32;
+      const vh = 18;
       canvas.width = vw;
       canvas.height = vh;
       ctx.drawImage(video, 0, 0, vw, vh);
       const frame = ctx.getImageData(0, 0, vw, vh);
       const data = frame.data;
 
-      ambilightZones.top.style.background = getAverageColor(data, vw, vh, 0, 0, vw, 6);
-      ambilightZones.bottom.style.background = getAverageColor(data, vw, vh, 0, vh - 6, vw, vh);
-      ambilightZones.left.style.background = getAverageColor(data, vw, vh, 0, 0, 4, vh);
-      ambilightZones.right.style.background = getAverageColor(data, vw, vh, vw - 4, 0, vw, vh);
-      circle.style.background = `radial-gradient(circle at center, transparent 60%, ${getAverageColor(data, vw, vh, 40, 20, 56, 34)} 100%)`;
+      ambilightZones.top.style.background = getAverageColor(data, vw, vh, 0, 0, vw, 3);
+      ambilightZones.bottom.style.background = getAverageColor(data, vw, vh, 0, vh - 3, vw, vh);
+      ambilightZones.left.style.background = getAverageColor(data, vw, vh, 0, 0, 2, vh);
+      ambilightZones.right.style.background = getAverageColor(data, vw, vh, vw - 2, 0, vw, vh);
+      circle.style.background = `radial-gradient(circle at center, transparent 65%, ${getAverageColor(data, vw, vh, 13, 6, 19, 11)} 100%)`;
     }
-
-    requestAnimationFrame(updateAmbilight);
   }
 
-  updateAmbilight();
+  setInterval(updateAmbilight, 100);
 </script>
+
 </body>
 </html>
